@@ -6,30 +6,34 @@ import pandas as pd
 import io
 
 def clean_excel(file):
-    # Read all cells as strings to avoid NaN for blanks
     df = pd.read_excel(file, dtype=str)
     df.columns = df.columns.str.strip()
 
     cleaned_df = df.copy()
     changes_by_column = {}
 
-    # Clean cell values: remove line breaks, trim whitespaces
     for col in df.columns:
-        changes = []
-        for i, val in df[col].items():
-            original = str(val) if pd.notnull(val) else ''
-            cleaned = original.replace('\n', ' ').replace('\r', ' ').strip()
+        # Get original and cleaned versions of the column
+        original_col = df[col].fillna("").astype(str)
+        cleaned_col = original_col.str.replace('\n', ' ', regex=False)\
+                                  .str.replace('\r', ' ', regex=False)\
+                                  .str.strip()
 
-            if original != cleaned:
-                cleaned_df.at[i, col] = cleaned
-                changes.append({
-                    "Row Number": i + 2,  # Excel-style index
-                    "Original": original,
-                    "Cleaned": cleaned
-                })
+        # Identify changed cells
+        mask = original_col != cleaned_col
 
-        if changes:
-            changes_by_column[col] = pd.DataFrame(changes)
+        if mask.any():
+            # Apply cleaned column to the output DataFrame
+            cleaned_df[col] = cleaned_col
+
+            # Store changed rows
+            changes = pd.DataFrame({
+                "Row Number": (mask[mask].index + 2),  # Excel-style index
+                "Original": original_col[mask].values,
+                "Cleaned": cleaned_col[mask].values
+            })
+
+            changes_by_column[col] = changes.reset_index(drop=True)
 
     return cleaned_df, changes_by_column
 
@@ -48,11 +52,10 @@ def main():
         st.subheader("🔍 Cleaned Data Preview")
         st.dataframe(cleaned_df.head(50))
 
-        # Show cleaned cells grouped by column
         st.subheader("📝 Cells That Were Cleaned")
         if changes_by_column:
             for col, df_changes in changes_by_column.items():
-                st.markdown(f"### Changes in Column: `{col}`")
+                st.markdown(f"### ✨ Changes in Column: `{col}`")
                 st.dataframe(df_changes)
         else:
             st.info("No cleaning was needed — all cells were already clean!")
