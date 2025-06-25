@@ -55,7 +55,7 @@ def main():
         st.subheader("📝 Cells That Were Cleaned")
         if changes_by_column:
             for col, df_changes in changes_by_column.items():
-                st.markdown(f"### ✨ Changes in Column: `{col}`")
+                st.markdown(f"### Changes in Column: `{col}`")
                 st.dataframe(df_changes)
         else:
             st.info("No cleaning was needed — all cells were already clean!")
